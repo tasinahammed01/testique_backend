@@ -1,43 +1,47 @@
 const express = require("express");
-const app = express();
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient } = require("mongodb"); 
+const { MongoClient } = require("mongodb");
 
 const allFoods = require("./routes/allFoods");
+const allBlogs = require("./routes/blogs");
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-const client = new MongoClient(process.env.MONGO_URL); 
+const client = new MongoClient(process.env.MONGO_URL);
 
-let db;
+let foodDB, blogDB;
 
+// Connect to MongoDB first
 client
   .connect()
   .then(() => {
-    db = client.db("AllFoodsDB"); 
+    foodDB = client.db("AllFoodsDB"); // replace with your actual food DB name
+    blogDB = client.db("Blogs"); // replace with your actual blogs DB name
     console.log("Connected to MongoDB");
+
+    // Attach DBs to req for all routes
+    app.use((req, res, next) => {
+      req.foodDB = foodDB;
+      req.blogDB = blogDB;
+      next();
+    });
+
+    // Routes (register AFTER DB is ready)
+    app.use("/allfoods", allFoods);
+    app.use("/allblogs", allBlogs);
+
+    app.get("/", (req, res) => {
+      res.send("Hello World!");
+    });
+
+    const port = process.env.PORT || 5000;
+    app.listen(port, () => {
+      console.log(`Server listening on port ${port}`);
+    });
   })
   .catch((err) => {
     console.error("Failed to connect to MongoDB:", err);
   });
-
-// Attach database to every request
-app.use((req, res, next) => {
-  req.db = db;
-  next();
-});
-
-const port = process.env.PORT || 5000;
-
-// Use the router properly
-app.use("/allfoods", allFoods);
-
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
