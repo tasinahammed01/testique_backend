@@ -47,6 +47,7 @@ router.get("/:id/comments", async (req, res) => {
   }
 });
 
+
 // Add a comment to a blog
 router.post("/:id/comments", async (req, res) => {
   try {

@@ -18,8 +18,8 @@ let foodDB, blogDB;
 client
   .connect()
   .then(() => {
-    foodDB = client.db("AllFoodsDB"); // replace with your actual food DB name
-    blogDB = client.db("Blogs"); // replace with your actual blogs DB name
+    foodDB = client.db("AllFoodsDB"); 
+    blogDB = client.db("Blogs"); 
     console.log("Connected to MongoDB");
 
     // Attach DBs to req for all routes
