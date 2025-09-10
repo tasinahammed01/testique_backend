@@ -7,6 +7,7 @@ const allFoods = require("./routes/allFoods");
 const allBlogs = require("./routes/blogs");
 const allgallery = require("./routes/gallery");
 const users = require("./routes/user");
+const orders = require("./routes/orders");
 
 const app = express();
 app.use(cors());
@@ -40,6 +41,7 @@ client
     app.use("/allblogs", allBlogs);
     app.use("/gallery", allgallery);
     app.use("/users", users);
+    app.use("/orders", orders);
 
     app.get("/", (req, res) => {
       res.send("Hello World!");
