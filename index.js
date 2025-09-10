@@ -6,6 +6,7 @@ const { MongoClient } = require("mongodb");
 const allFoods = require("./routes/allFoods");
 const allBlogs = require("./routes/blogs");
 const allgallery = require("./routes/gallery");
+const users = require("./routes/user");
 
 const app = express();
 app.use(cors());
@@ -13,7 +14,7 @@ app.use(express.json());
 
 const client = new MongoClient(process.env.MONGO_URL);
 
-let foodDB, blogDB , galleryDB;
+let foodDB, blogDB, galleryDB, userDB;
 
 // Connect to MongoDB first
 client
@@ -22,6 +23,7 @@ client
     foodDB = client.db("AllFoodsDB");
     blogDB = client.db("Blogs");
     galleryDB = client.db("GalleryDb");
+    userDB = client.db("UsersDB");
     console.log("Connected to MongoDB");
 
     // Attach DBs to req for all routes
@@ -29,6 +31,7 @@ client
       req.foodDB = foodDB;
       req.blogDB = blogDB;
       req.galleryDB = galleryDB;
+      req.userDB = userDB;
       next();
     });
 
@@ -36,6 +39,7 @@ client
     app.use("/allfoods", allFoods);
     app.use("/allblogs", allBlogs);
     app.use("/gallery", allgallery);
+    app.use("/users", users);
 
     app.get("/", (req, res) => {
       res.send("Hello World!");
