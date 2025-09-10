@@ -36,7 +36,14 @@ router.get("/:id", async (req, res) => {
 // CREATE new user
 router.post("/", async (req, res) => {
   try {
-    const { name, email, password, role = "customer" } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role = "customer",
+      address = "",
+      phone = "",
+    } = req.body;
 
     if (!name || !email || !password)
       return res.status(400).json({ message: "All fields are required" });
@@ -55,6 +62,8 @@ router.post("/", async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      address,
+      phone,
       role,
       cart: [],
       orders: [],
@@ -64,24 +73,27 @@ router.post("/", async (req, res) => {
     const result = await req.userDB
       .collection("UsersCollection")
       .insertOne(newUser);
+
     res
       .status(201)
       .json({ message: "User created", userId: result.insertedId });
   } catch (e) {
+    console.error("Error creating user:", e); // log full error
     res.status(500).json({ error: e.message });
   }
 });
 
-// UPDATE user
 router.put("/:id", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, address } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
-    if (email) updateData.email = email;
+    if (email) updateData.email = email; // optional
     if (role) updateData.role = role;
     if (password) updateData.password = await bcrypt.hash(password, 10);
+    if (phone) updateData.phone = phone;
+    if (address) updateData.address = address;
 
     const result = await req.userDB
       .collection("UsersCollection")
@@ -90,8 +102,17 @@ router.put("/:id", async (req, res) => {
     if (result.matchedCount === 0)
       return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ message: "User updated" });
+    // Return the updated user without password
+    const updatedUser = await req.userDB
+      .collection("UsersCollection")
+      .findOne(
+        { _id: new ObjectId(req.params.id) },
+        { projection: { password: 0 } }
+      );
+
+    res.status(200).json(updatedUser);
   } catch (e) {
+    console.error("Error updating user:", e);
     res.status(500).json({ error: e.message });
   }
 });
