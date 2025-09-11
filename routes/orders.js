@@ -12,11 +12,11 @@ const generateProductId = () => {
   return "PROD-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
 };
 
-// GET all orders
+// GET all orders (from OrdersDB)
 router.get("/", async (req, res) => {
   try {
-    const orders = await req.userDB
-      .collection("UsersCollection")
+    const orders = await req.ordersDB
+      .collection("OrdersCollection")
       .find()
       .toArray();
     res.status(200).json(orders);
@@ -28,8 +28,8 @@ router.get("/", async (req, res) => {
 // GET single order by ID
 router.get("/:id", async (req, res) => {
   try {
-    const order = await req.userDB
-      .collection("UsersCollection")
+    const order = await req.ordersDB
+      .collection("OrdersCollection")
       .findOne({ _id: new ObjectId(req.params.id) });
 
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -42,8 +42,8 @@ router.get("/:id", async (req, res) => {
 // GET orders by user ID
 router.get("/user/:userId", async (req, res) => {
   try {
-    const orders = await req.userDB
-      .collection("UsersCollection")
+    const orders = await req.ordersDB
+      .collection("OrdersCollection")
       .find({ userId: req.params.userId })
       .toArray();
 
@@ -53,16 +53,10 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 
-// CREATE new order
+// CREATE new order (insert into OrdersCollection)
 router.post("/", async (req, res) => {
   try {
-    const {
-      userId,
-      items,
-      totalAmount,
-      status = "pending",
-      address,
-    } = req.body;
+    const { userId, items, totalAmount, status = "pending", address } = req.body;
 
     if (!userId || !items || items.length === 0 || !totalAmount || !address) {
       return res.status(400).json({ message: "All fields are required" });
@@ -77,8 +71,8 @@ router.post("/", async (req, res) => {
     }));
 
     const newOrder = {
-      orderId: generateOrderId(),
       userId,
+      orderId: generateOrderId(),
       items: itemsWithIds,
       totalAmount,
       status,
@@ -87,42 +81,33 @@ router.post("/", async (req, res) => {
       updatedAt: new Date(),
     };
 
-    const result = await req.userDB
-      .collection("UsersCollection")
+    const result = await req.ordersDB
+      .collection("OrdersCollection")
       .insertOne(newOrder);
 
-    res
-      .status(201)
-      .json({ message: "Order created", orderId: result.insertedId });
+    res.status(201).json({ message: "Order created", orderId: newOrder.orderId, _id: result.insertedId });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// (Removed duplicate POST route that relied on req.user)
+
 // UPDATE order status
-router.put("/update/:userId/:orderId", async (req, res) => {
+router.put("/:orderId", async (req, res) => {
   const { status } = req.body;
-  const { userId, orderId } = req.params;
+  const { orderId } = req.params;
 
   try {
-    const user = await req.userDB
-      .collection("UsersCollection")
-      .findOne({ _id: new ObjectId(userId) });
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const updatedOrders = user.orders.map((order) =>
-      order.orderId === orderId
-        ? { ...order, status, updatedAt: new Date() }
-        : order
-    );
-
-    await req.userDB
-      .collection("UsersCollection")
+    const result = await req.ordersDB
+      .collection("OrdersCollection")
       .updateOne(
-        { _id: new ObjectId(userId) },
-        { $set: { orders: updatedOrders } }
+        { orderId },
+        { $set: { status, updatedAt: new Date() } }
       );
+
+    if (result.matchedCount === 0)
+      return res.status(404).json({ message: "Order not found" });
 
     res.status(200).json({ message: "Order status updated" });
   } catch (err) {
@@ -131,26 +116,16 @@ router.put("/update/:userId/:orderId", async (req, res) => {
 });
 
 // DELETE order
-router.delete("/delete/:userId/:orderId", async (req, res) => {
-  const { userId, orderId } = req.params;
+router.delete("/:orderId", async (req, res) => {
+  const { orderId } = req.params;
 
   try {
-    const user = await req.userDB
-      .collection("UsersCollection")
-      .findOne({ _id: new ObjectId(userId) });
+    const result = await req.ordersDB
+      .collection("OrdersCollection")
+      .deleteOne({ orderId });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const updatedOrders = user.orders.filter(
-      (order) => order.orderId !== orderId
-    );
-
-    await req.userDB
-      .collection("UsersCollection")
-      .updateOne(
-        { _id: new ObjectId(userId) },
-        { $set: { orders: updatedOrders } }
-      );
+    if (result.deletedCount === 0)
+      return res.status(404).json({ message: "Order not found" });
 
     res.status(200).json({ message: "Order deleted" });
   } catch (err) {
