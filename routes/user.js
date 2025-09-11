@@ -85,7 +85,7 @@ router.post("/", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
   try {
-    const { name, email, password, role, phone, address } = req.body;
+    const { name, email, password, role, phone, address, orders } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -94,6 +94,7 @@ router.put("/:id", async (req, res) => {
     if (password) updateData.password = await bcrypt.hash(password, 10);
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (orders) updateData.orders = orders; // Handle orders array updates
 
     const result = await req.userDB
       .collection("UsersCollection")
